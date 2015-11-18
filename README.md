@@ -5,7 +5,8 @@ These demos are purposely written in a simple and clear style. You will find no 
 ## Related Demos
 
 - [Webpack Demos](https://github.com/ruanyf/webpack-demos)
-- Flux Demos ([1](https://github.com/ruanyf/flux-for-stupid-people-demo), [2](https://github.com/ruanyf/flux-todomvc-demo))
+- [Flux Demo 01](https://github.com/ruanyf/flux-for-stupid-people-demo)
+- [Flux Demo 02](https://github.com/ruanyf/flux-todomvc-demo)
 
 ## How to use
 
@@ -51,7 +52,8 @@ Then play with the source files under the repo's demo* directories.
 1. [Form](#demo09-form-source)
 1. [Component Lifecycle](#demo10-component-lifecycle-source)
 1. [Ajax](#demo11-ajax-source)
-1. [Server-side rendering](#demo12-server-side-rendering-source)
+1. [Display value from a Promise](#demo12-display-value-from-a-promise-source)
+1. [Server-side rendering](#demo13-server-side-rendering-source)
 
 ---
 
@@ -127,14 +129,14 @@ Components can have attributes, and you can use `this.props.[attribute]` to acce
 
 React uses `this.props.children` to access a component's children nodes.
 
-```js
+```javascript
 var NotesList = React.createClass({
   render: function() {
     return (
       <ol>
       {
-        this.props.children.map(function (child) {
-          return <li>{child}</li>
+        React.Children.map(this.props.children, function (child) {
+          return <li>{child}</li>;
         })
       }
       </ol>
@@ -151,7 +153,9 @@ ReactDOM.render(
 );
 ```
 
-Please be minded that only if the component has more than one child node, you could take `this.props.children` as an array, otherwise `this.props.children.map` throws a TypeError.
+Please be minded that the value of `this.props.children` has three possibilities. If the component has no children node, the value is `undefined`; If single children node, an object; If multiple children nodes, an array. You should be careful to handle it.
+
+React gave us an utility [`React.Children`](https://facebook.github.io/react/docs/top-level-api.html#react.children) for dealing with the `this.props.children`'s opaque data structure. You could use `React.Children.map` to iterate `this.props.children` without worring its data type being `undefined` or `object`. Check [official document](https://facebook.github.io/react/docs/top-level-api.html#react.children) for more methods `React.Children` offers.
 
 ## Demo06: PropTypes ([source](https://github.com/ruanyf/react-demos/blob/master/demo06/index.html))
 
@@ -217,12 +221,12 @@ ReactDOM.render(
 
 ## Demo07: Finding a DOM node ([source](https://github.com/ruanyf/react-demos/blob/master/demo07/index.html))
 
-Sometimes you need to reference a DOM node in a component. React gives you `ReactDOM.findDOMNode()` to find it.
+Sometimes you need to reference a DOM node in a component. React gives you the `ref` attribute to find it.
 
 ```js
 var MyComponent = React.createClass({
   handleClick: function() {
-    ReactDOM.findDOMNode(this.refs.myTextInput).focus();
+    this.refs.myTextInput.focus();
   },
   render: function() {
     return (
@@ -240,7 +244,7 @@ ReactDOM.render(
 );
 ```
 
-The desired DOM node should have a `ref` attribute, and `ReactDOM.findDOMNode(this.refs.[refName])` would return the corresponding DOM node. Please be minded that you could do that only after this component has been mounted into the DOM, otherwise you get `null`.
+The desired DOM node should have a `ref` attribute, and `this.refs.[refName]` would return the corresponding DOM node. Please be minded that you could do that only after this component has been mounted into the DOM, otherwise you get `null`.
 
 ## Demo08: this.state ([source](https://github.com/ruanyf/react-demos/blob/master/demo08/index.html))
 
@@ -393,7 +397,65 @@ ReactDOM.render(
 );
 ```
 
-## Demo12: Server-side rendering ([source](https://github.com/ruanyf/react-demos/tree/master/demo11/src))
+## Demo12: Display value from a Promise ([source](https://github.com/ruanyf/react-demos/tree/master/demo12/index.html))
+
+This demo is inspired by Nat Pryce's article ["Higher Order React Components"](http://natpryce.com/articles/000814.html).
+
+If a React component's data is received asynchronously, we can use a Promise object as the component's property also, just as the following.
+
+```javascript
+ReactDOM.render(
+  <RepoList
+    promise={$.getJSON('https://api.github.com/search/repositories?q=javascript&sort=stars')}
+  />,
+  document.body
+);
+```
+
+The above code takes data from Github's API, and the `RepoList` component gets a Promise object as its property.
+
+Now, while the promise is pending, the component displays a loading indicator. When the promise is resolved successfully, the component displays a list of repository information. If the promise is rejected, the component displays an error message.
+
+```javascript
+var RepoList = React.createClass({
+  getInitialState: function() {
+    return { loading: true, error: null, data: null};
+  },
+
+  componentDidMount() {
+    this.props.promise.then(
+      value => this.setState({loading: false, data: value}),
+      error => this.setState({loading: false, error: error}));
+  },
+
+  render: function() {
+    if (this.state.loading) {
+      return <span>Loading...</span>;
+    }
+    else if (this.state.error !== null) {
+      return <span>Error: {this.state.error.message}</span>;
+    }
+    else {
+      var repos = this.state.data.items;
+      var repoList = repos.map(function (repo) {
+        return (
+          <li>
+            <a href={repo.html_url}>{repo.name}</a> ({repo.stargazers_count} stars) <br/> {repo.description}
+          </li>
+        );
+      });
+      return (
+        <main>
+          <h1>Most Popular JavaScript Projects in Github</h1>
+          <ol>{repoList}</ol>
+        </main>
+      );
+    }
+  }
+});
+```
+
+## Demo13: Server-side rendering ([source](https://github.com/ruanyf/react-demos/tree/master/demo13/src))
 
 This demo is copied from [github.com/mhart/react-server-example](https://github.com/mhart/react-server-example), but I rewrote it with JSX syntax.
 
